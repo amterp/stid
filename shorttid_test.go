@@ -1,6 +1,7 @@
 package shorttid
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -15,8 +16,8 @@ func Test_DefaultConfig(t *testing.T) {
 	if !cfg.Epoch.Equal(expectedEpoch) {
 		t.Errorf("DefaultConfig Epoch got %v, want %v", cfg.Epoch, expectedEpoch)
 	}
-	if cfg.TimeResolution != Millisecond {
-		t.Errorf("DefaultConfig TimeResolution got %d, want %d (Millisecond)", cfg.TimeResolution, Millisecond)
+	if cfg.TimeGranularity != Millisecond {
+		t.Errorf("DefaultConfig TimeGranularity got %d, want %d (Millisecond)", cfg.TimeGranularity, Millisecond)
 	}
 	if cfg.Alphabet != DefaultAlphabet {
 		t.Errorf("DefaultConfig Alphabet got %q, want %q", cfg.Alphabet, DefaultAlphabet)
@@ -37,50 +38,50 @@ func Test_NewGenerator_Validation(t *testing.T) {
 		{
 			name: "Valid Custom",
 			config: Config{
-				Epoch:          time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-				TimeResolution: Second,
-				Alphabet:       "abc",
-				RandomChars:    3,
+				Epoch:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				TimeGranularity: Second,
+				Alphabet:        "abc",
+				RandomChars:     3,
 			},
 			expectError: false,
 		},
 		{
-			name: "Invalid TimeResolution Zero",
+			name: "Invalid TimeGranularity Zero",
 			config: Config{
-				Epoch:          defaultEpoch,
-				TimeResolution: 0, // Invalid
-				Alphabet:       DefaultAlphabet,
-				RandomChars:    5,
+				Epoch:           DefaultEpoch,
+				TimeGranularity: 0, // Invalid
+				Alphabet:        DefaultAlphabet,
+				RandomChars:     5,
 			},
 			expectError: true,
 		},
 		{
 			name: "Invalid Alphabet Empty",
 			config: Config{
-				Epoch:          defaultEpoch,
-				TimeResolution: Millisecond,
-				Alphabet:       "", // Invalid
-				RandomChars:    5,
+				Epoch:           DefaultEpoch,
+				TimeGranularity: Millisecond,
+				Alphabet:        "", // Invalid
+				RandomChars:     5,
 			},
 			expectError: true,
 		},
 		{
 			name: "Invalid Alphabet Single Char",
 			config: Config{
-				Epoch:          defaultEpoch,
-				TimeResolution: Millisecond,
-				Alphabet:       "a", // Invalid
-				RandomChars:    5,
+				Epoch:           DefaultEpoch,
+				TimeGranularity: Millisecond,
+				Alphabet:        "a", // Invalid
+				RandomChars:     5,
 			},
 			expectError: true,
 		},
 		{
 			name: "Invalid RandomChars Negative",
 			config: Config{
-				Epoch:          defaultEpoch,
-				TimeResolution: Millisecond,
-				Alphabet:       DefaultAlphabet,
-				RandomChars:    -1, // Invalid
+				Epoch:           DefaultEpoch,
+				TimeGranularity: Millisecond,
+				Alphabet:        DefaultAlphabet,
+				RandomChars:     -1, // Invalid
 			},
 			expectError: true,
 		},
@@ -150,10 +151,10 @@ func Test_Generate(t *testing.T) {
 // Test basic generation, uniqueness, and character set
 func Test_Generator_Generate_Basic(t *testing.T) {
 	cfg := Config{
-		Epoch:          time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-		TimeResolution: Decisecond,
-		Alphabet:       "abcdef0123456789", // Hex Lowercase
-		RandomChars:    6,
+		Epoch:           time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+		TimeGranularity: Decisecond,
+		Alphabet:        "abcdef0123456789", // Hex Lowercase
+		RandomChars:     6,
 	}
 	gen, err := NewGenerator(cfg)
 	if err != nil {
@@ -204,10 +205,10 @@ func Test_Generator_Generate_Basic(t *testing.T) {
 // Test sortability of generated IDs
 func Test_Generator_Generate_Sortability(t *testing.T) {
 	cfg := Config{
-		Epoch:          time.Now().UTC().Add(-10 * time.Second), // Start epoch recently
-		TimeResolution: Decisecond,                              // 100ms
-		Alphabet:       DefaultAlphabet,
-		RandomChars:    4,
+		Epoch:           time.Now().UTC().Add(-10 * time.Second), // Start epoch recently
+		TimeGranularity: Decisecond,                              // 100ms
+		Alphabet:        DefaultAlphabet,
+		RandomChars:     4,
 	}
 	gen, err := NewGenerator(cfg)
 	if err != nil {
@@ -215,7 +216,7 @@ func Test_Generator_Generate_Sortability(t *testing.T) {
 	}
 
 	const numIDs = 5
-	const delay = 150 * time.Millisecond // Delay > TimeResolution
+	const delay = 150 * time.Millisecond // Delay > TimeGranularity
 
 	originalOrder := make([]string, numIDs)
 	sortedOrder := make([]string, numIDs)
@@ -247,10 +248,10 @@ func Test_Generator_Generate_Sortability(t *testing.T) {
 func Test_Generator_Generate_BeforeEpoch(t *testing.T) {
 	futureEpoch := time.Now().UTC().Add(1 * time.Hour)
 	gen, err := NewGenerator(Config{
-		Epoch:          futureEpoch,
-		TimeResolution: Second,
-		Alphabet:       "01",
-		RandomChars:    1,
+		Epoch:           futureEpoch,
+		TimeGranularity: Second,
+		Alphabet:        "01",
+		RandomChars:     1,
 	})
 	if err != nil {
 		t.Fatalf("NewGenerator failed: %v", err)
@@ -267,10 +268,10 @@ func Test_Generator_Generate_BeforeEpoch(t *testing.T) {
 // Test generation with zero random characters
 func Test_Generator_Generate_ZeroRandomChars(t *testing.T) {
 	gen, err := NewGenerator(Config{
-		Epoch:          defaultEpoch,
-		TimeResolution: Millisecond,
-		Alphabet:       "0123456789",
-		RandomChars:    0, // No random part
+		Epoch:           DefaultEpoch,
+		TimeGranularity: Millisecond,
+		Alphabet:        "0123456789",
+		RandomChars:     0, // No random part
 	})
 	if err != nil {
 		t.Fatalf("NewGenerator failed: %v", err)
@@ -395,11 +396,11 @@ func Test_RandomChars(t *testing.T) {
 }
 
 // Example showing how granularity affects the timestamp part
-func Test_TimeResolutionEffect(t *testing.T) {
+func Test_TimeGranularityEffect(t *testing.T) {
 	epoch := time.Now().UTC().Add(-5 * time.Second) // Recent epoch
 
-	genSec, _ := NewGenerator(Config{Epoch: epoch, TimeResolution: Second, Alphabet: "0123456789", RandomChars: 2})
-	genMs, _ := NewGenerator(Config{Epoch: epoch, TimeResolution: Millisecond, Alphabet: "0123456789", RandomChars: 2})
+	genSec, _ := NewGenerator(Config{Epoch: epoch, TimeGranularity: Second, Alphabet: "0123456789", RandomChars: 2})
+	genMs, _ := NewGenerator(Config{Epoch: epoch, TimeGranularity: Millisecond, Alphabet: "0123456789", RandomChars: 2})
 
 	// Generate multiple quickly within the same second but different milliseconds
 	idSec1, _ := genSec.Generate()
@@ -433,7 +434,29 @@ func Test_TimeResolutionEffect(t *testing.T) {
 	}
 }
 
-// Helper to check if a string contains only characters from a given alphabet
+func Test_Sandbox(t *testing.T) {
+	gen, _ := NewGenerator(Config{
+		Epoch: DefaultEpoch,
+		//Epoch:          time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		TimeGranularity: Millisecond,
+		Alphabet:        Base16LowerAlphabet,
+		RandomChars:     6,
+	})
+
+	ids := make(map[string]struct{})
+	for i := 0; i < 2; i++ {
+		id, _ := gen.Generate()
+		ids[id] = struct{}{}
+		fmt.Printf("%s ", id)
+		if i%10 == 9 {
+			fmt.Printf("\n")
+		}
+		time.Sleep(time.Duration(1) * time.Millisecond * 5)
+	}
+	fmt.Printf("\n")
+	fmt.Printf("Generated %d unique IDs\n", len(ids))
+}
+
 func containsOnly(s string, alphabet string) bool {
 	for _, r := range s {
 		if !strings.ContainsRune(alphabet, r) {

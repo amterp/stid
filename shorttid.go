@@ -10,28 +10,38 @@ import (
 )
 
 // DefaultAlphabet is the standard base62 alphabet (0-9, A-Z, a-z).
-const DefaultAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
-// TimeResolution represents the time resolution in milliseconds.
-type TimeResolution int
-
-// Common TimeResolution values in milliseconds.
 const (
-	Millisecond TimeResolution = 1
-	Centisecond TimeResolution = 10
-	Decisecond  TimeResolution = 100
-	Second      TimeResolution = 1000
-	Minute      TimeResolution = 60000
-	Hour        TimeResolution = 3600000
-	Day         TimeResolution = 86400000
+	DefaultAlphabet = Base62Alphabet
+
+	Base62Alphabet      = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	Base36Alphabet      = "0123456789abcdefghijklmnopqrstuvwxyz"
+	Base16LowerAlphabet = "0123456789abcdef"
+	Base16UpperAlphabet = "0123456789ABCDEF"
+	Base64UrlAlphabet   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+	// CrockfordBase32Alphabet is designed for human readability and is case-insensitive (excludes I, L, O, U).
+	CrockfordBase32Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+)
+
+// TimeGranularity represents the time granularity in milliseconds.
+type TimeGranularity int
+
+// Common TimeGranularity values in milliseconds.
+const (
+	Millisecond TimeGranularity = 1
+	Centisecond TimeGranularity = 10
+	Decisecond  TimeGranularity = 100
+	Second      TimeGranularity = 1000
+	Minute      TimeGranularity = 60000
+	Hour        TimeGranularity = 3600000
+	Day         TimeGranularity = 86400000
 )
 
 // Config holds the configuration for generating short TIDs.
 type Config struct {
-	Epoch          time.Time      // The starting point for the time component (UTC recommended).
-	TimeResolution TimeResolution // The resolution of the time component.
-	Alphabet       string         // The alphabet used for encoding timestamp and random parts.
-	RandomChars    int            // The number of random characters to append.
+	Epoch           time.Time       // The starting point for the time component (UTC recommended).
+	TimeGranularity TimeGranularity // The granularity of the time component.
+	Alphabet        string          // The alphabet used for encoding timestamp and random parts.
+	RandomChars     int             // The number of random characters to append.
 }
 
 // Generator is responsible for generating TIDs based on a fixed configuration.
@@ -41,7 +51,7 @@ type Generator struct {
 }
 
 var (
-	defaultEpoch     = time.Unix(0, 0).UTC()
+	DefaultEpoch     = time.Unix(0, 0).UTC()
 	defaultGenerator *Generator
 )
 
@@ -55,22 +65,50 @@ func init() {
 
 // DefaultConfig returns a default configuration:
 // - Epoch: Unix Epoch (1970-01-01 00:00:00 UTC)
-// - TimeResolution: Millisecond (1ms)
+// - TimeGranularity: Millisecond (1ms)
 // - Alphabet: Base62
 // - RandomChars: 5
 func DefaultConfig() Config {
 	return Config{
-		Epoch:          defaultEpoch,
-		TimeResolution: Millisecond,
-		Alphabet:       DefaultAlphabet,
-		RandomChars:    5,
+		Epoch:           DefaultEpoch,
+		TimeGranularity: Millisecond,
+		Alphabet:        DefaultAlphabet,
+		RandomChars:     5,
 	}
+}
+
+func NewConfig() Config {
+	return DefaultConfig()
+}
+
+// SetEpoch sets the epoch for the generator.
+func (c *Config) SetEpoch(epoch time.Time) *Config {
+	c.Epoch = epoch
+	return c
+}
+
+// SetTimeGranularity sets the time granularity for the generator.
+func (c *Config) SetTimeGranularity(granularity TimeGranularity) *Config {
+	c.TimeGranularity = granularity
+	return c
+}
+
+// SetAlphabet sets the alphabet for the generator.
+func (c *Config) SetAlphabet(alphabet string) *Config {
+	c.Alphabet = alphabet
+	return c
+}
+
+// SetRandomChars sets the number of random characters for the generator.
+func (c *Config) SetRandomChars(randomChars int) *Config {
+	c.RandomChars = randomChars
+	return c
 }
 
 // NewGenerator creates a new Generator instance with the given configuration.
 // It validates the configuration upon creation.
 func NewGenerator(config Config) (*Generator, error) {
-	if config.TimeResolution <= 0 {
+	if config.TimeGranularity <= 0 {
 		return nil, errors.New("granularity must be positive")
 	}
 
@@ -100,7 +138,7 @@ func (g *Generator) Generate() (string, error) {
 	}
 
 	delta := now.Sub(g.config.Epoch)
-	ticks := uint64(delta.Milliseconds() / int64(g.config.TimeResolution))
+	ticks := uint64(delta.Milliseconds() / int64(g.config.TimeGranularity))
 
 	// 2. Encode timestamp ticks
 	encodedTimestamp, err := g.encodeBaseN(ticks)
