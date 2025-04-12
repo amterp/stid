@@ -179,6 +179,14 @@ func Generate() (string, error) {
 	return defaultGenerator.Generate()
 }
 
+func MustGenerate() string {
+	id, err := Generate()
+	if err != nil {
+		panic("stid: failed to generate TID: " + err.Error())
+	}
+	return id
+}
+
 func (g *Generator) MustGenerate() string {
 	id, err := g.Generate()
 	if err != nil {

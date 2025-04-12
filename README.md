@@ -5,16 +5,49 @@ Generate short string IDs with a time and random component. Also referred to as 
 Useful for when you want to *guarantee* 0 collisions between two points in time, while minimizing collisions for
 generated IDs *within* that time.
 
-**For example:** "Generate base-62 IDs with a time granularity of 1 millisecond, and with 5 extra random characters at
-the end."
+**For example:**
+
+> "Generate base-62 IDs with a time granularity of 1 millisecond, and with 5 extra random characters at the end."
 
 ## Installation
 
-TODO
+```sh
+go get github.com/amterp/stid
+```
 
 ## Usage
 
-TODO
+### Basic
+
+You can use the default generator, which uses default settings.
+
+```go
+import "github.com/amterp/stid"
+
+id := stid.MustGenerate()
+anotherId, err := stdin.Generate()
+```
+
+### Advanced (Custom Settings)
+
+You can create your own `Generator` by passing it your own `Config` object.
+
+```go
+import "github.com/amterp/stid"
+
+// NewConfig creates with defaults.
+// You can then chain With methods to customize settings.
+config := stid.NewConfig()
+	WithTimeGranularity(stid.TimeGranularity(1000)).
+	WithRandomChars(6).
+	WithAlphabet(stid.Base16LowerAlphabet)
+
+// Create the generator with the config.
+generator, err := stid.NewGenerator(config)
+
+// Use it to generate ids.
+id := generator.MustGenerate()
+```
 
 ## How does it work?
 
