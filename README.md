@@ -7,7 +7,7 @@ generated IDs *within* that time.
 
 **For example:**
 
-> "Generate base-62 IDs with a time granularity of 1 millisecond, and with 5 extra random characters at the end."
+> Generate base-62 IDs with a time granularity of 1 millisecond, and with 5 extra random characters at the end.
 
 ## Installation
 
@@ -76,12 +76,11 @@ Some examples of how **just this beginning segment** varies depending on the gra
 By default, the epoch start time is the traditional UNIX epoch of 1970-01-01. You can override this, however, to reduce
 the size of the time component.
 
-The above table uses the default UNIX start time. The following example instead uses 2025-01-01, generated in 2025-04 (
-after 3 months of time).
+The following table compares IDs generated off the UNIX epoch vs. a 2025-01-01 epoch, generated in 2025-04.
 
 | Granularity        | UNIX (1970) Epoch Example | 2025-01 Epoch Example | Character reduction |
 |--------------------|---------------------------|-----------------------|---------------------|
-| Millisecond        | `Ui8NksP`                 | `9YGDBT`              | 0                   |
+| Millisecond        | `Ui8NksP`                 | `9YGDBT`              | -1                  |
 | Decisecond (100ms) | `J2YxUE`                  | `5vCer`               | -1                  |
 | Second             | `1u3UkZ`                  | `aifP`                | -2                  |
 | Hour               | `223a`                    | `dC`                  | -2                  |
@@ -95,8 +94,8 @@ The time component, by itself, guarantees uniqueness *across* time granularity t
 *within* a time tick, we add a "random component". Simply put, we randomly select characters from a given alphabet.
 
 Using the default base-62 as an example, each appended character reduces the likelihood of collision by a factor of 62.
-If we use 5 random characters, that's `62^5 = 916,132,832` unique possibilities. So, for any two IDs, the odds of them
-colliding is 1 in 916,132,832, **assuming they were generated in the same time granularity tick!**
+If we use 5 random characters, that's `62^5 = 916,132,832` unique possibilities. So, for any two IDs generated in the same granularity tick, the odds of them
+colliding is 1 in 916,132,832.
 
 That said, be aware of the [Birthday Problem](https://en.wikipedia.org/wiki/Birthday_problem) and
 the [Pigeonhole](https://en.wikipedia.org/wiki/Pigeonhole_principle) principle.
