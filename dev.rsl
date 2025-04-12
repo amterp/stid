@@ -1,0 +1,8 @@
+#!/usr/bin/env rad
+---
+Facilitates development & ops for shorttid.
+---
+args:
+    command string
+
+    command enum ["release"]
