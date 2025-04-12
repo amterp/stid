@@ -1,4 +1,4 @@
-# Go Short TID
+# Go STID: Short Time IDs
 
 Generate short string IDs with a time and random component. Also referred to as "STIDs": **S**hort **T**ime **ID**s.
 

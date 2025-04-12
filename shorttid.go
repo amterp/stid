@@ -1,4 +1,4 @@
-package shorttid
+package stid
 
 import (
 	"crypto/rand"
@@ -38,10 +38,10 @@ const (
 
 // Config holds the configuration for generating short TIDs.
 type Config struct {
-	Epoch           time.Time       // The starting point for the time component (UTC recommended).
-	TimeGranularity TimeGranularity // The granularity of the time component.
-	Alphabet        string          // The alphabet used for encoding timestamp and random parts.
-	RandomChars     int             // The number of random characters to append.
+	epoch           time.Time       // The starting point for the time component (UTC recommended).
+	timeGranularity TimeGranularity // The granularity of the time component.
+	alphabet        string          // The alphabet used for encoding timestamp and random parts.
+	randomChars     int             // The number of random characters to append.
 }
 
 // Generator is responsible for generating TIDs based on a fixed configuration.
@@ -59,21 +59,21 @@ func init() {
 	var err error
 	defaultGenerator, err = NewGenerator(DefaultConfig())
 	if err != nil {
-		panic("shorttid: failed to initialize default generator: " + err.Error())
+		panic("stid: failed to initialize default generator: " + err.Error())
 	}
 }
 
 // DefaultConfig returns a default configuration:
-// - Epoch: Unix Epoch (1970-01-01 00:00:00 UTC)
+// - epoch: Unix epoch (1970-01-01 00:00:00 UTC)
 // - TimeGranularity: Millisecond (1ms)
-// - Alphabet: Base62
-// - RandomChars: 5
+// - alphabet: Base62
+// - randomChars: 5
 func DefaultConfig() Config {
 	return Config{
-		Epoch:           DefaultEpoch,
-		TimeGranularity: Millisecond,
-		Alphabet:        DefaultAlphabet,
-		RandomChars:     5,
+		epoch:           DefaultEpoch,
+		timeGranularity: Millisecond,
+		alphabet:        DefaultAlphabet,
+		randomChars:     5,
 	}
 }
 
@@ -81,49 +81,53 @@ func NewConfig() Config {
 	return DefaultConfig()
 }
 
-// SetEpoch sets the epoch for the generator.
-func (c *Config) SetEpoch(epoch time.Time) *Config {
-	c.Epoch = epoch
+// WithEpoch sets the epoch for the generator.
+func (c Config) WithEpoch(epoch time.Time) Config {
+	c.epoch = epoch
 	return c
 }
 
-// SetTimeGranularity sets the time granularity for the generator.
-func (c *Config) SetTimeGranularity(granularity TimeGranularity) *Config {
-	c.TimeGranularity = granularity
+// WithTimeGranularity sets the time granularity for the generator.
+func (c Config) WithTimeGranularity(granularity TimeGranularity) Config {
+	c.timeGranularity = granularity
 	return c
 }
 
-// SetAlphabet sets the alphabet for the generator.
-func (c *Config) SetAlphabet(alphabet string) *Config {
-	c.Alphabet = alphabet
+// WithAlphabet sets the alphabet for the generator.
+func (c Config) WithAlphabet(alphabet string) Config {
+	c.alphabet = alphabet
 	return c
 }
 
-// SetRandomChars sets the number of random characters for the generator.
-func (c *Config) SetRandomChars(randomChars int) *Config {
-	c.RandomChars = randomChars
+// WithRandomChars sets the number of random characters for the generator.
+func (c Config) WithRandomChars(randomChars int) Config {
+	c.randomChars = randomChars
 	return c
 }
 
 // NewGenerator creates a new Generator instance with the given configuration.
 // It validates the configuration upon creation.
 func NewGenerator(config Config) (*Generator, error) {
-	if config.TimeGranularity <= 0 {
-		return nil, errors.New("granularity must be positive")
-	}
-
-	if len(config.Alphabet) < 2 {
+	if len(config.alphabet) < 2 {
 		return nil, errors.New("alphabet must contain at least 2 characters")
 	}
 
-	if config.RandomChars < 0 {
+	if config.randomChars < 0 {
 		return nil, errors.New("number of random characters cannot be negative")
 	}
 
 	return &Generator{
 		config: config,
-		base:   len(config.Alphabet),
+		base:   len(config.alphabet),
 	}, nil
+}
+
+func MustNewGenerator(config Config) *Generator {
+	generator, err := NewGenerator(config)
+	if err != nil {
+		panic("stid: failed to create generator: " + err.Error())
+	}
+	return generator
 }
 
 // Generate creates a new short TID using the generator's configuration.
@@ -133,26 +137,30 @@ func (g *Generator) Generate() (string, error) {
 
 	// Check if current time is before the configured epoch. This must be done
 	// here, as 'now' is only known at generation time. Allow generation at epoch time.
-	if now.Before(g.config.Epoch) {
+	if now.Before(g.config.epoch) {
 		return "", errors.New("current time is before the configured epoch")
 	}
 
-	delta := now.Sub(g.config.Epoch)
-	ticks := uint64(delta.Milliseconds() / int64(g.config.TimeGranularity))
-
-	// 2. Encode timestamp ticks
-	encodedTimestamp, err := g.encodeBaseN(ticks)
-	if err != nil {
-		return "", err
+	// 2. Encode timestamp ticks (if applicable)
+	encodedTimestamp := ""
+	if g.config.timeGranularity > 0 {
+		delta := now.Sub(g.config.epoch)
+		ticks := uint64(delta.Milliseconds() / int64(g.config.timeGranularity))
+		encoded, err := g.encodeBaseN(ticks)
+		if err != nil {
+			return "", err
+		}
+		encodedTimestamp = encoded
 	}
 
 	// 3. Generate random part
 	randomPart := ""
-	if g.config.RandomChars > 0 {
-		randomPart, err = g.randomChars(g.config.RandomChars)
+	if g.config.randomChars > 0 {
+		chars, err := g.randomChars(g.config.randomChars)
 		if err != nil {
 			return "", err
 		}
+		randomPart = chars
 	}
 
 	// 4. Combine parts
@@ -166,15 +174,23 @@ func (g *Generator) Generate() (string, error) {
 // It panics if the internal default generator failed to initialize.
 func Generate() (string, error) {
 	if defaultGenerator == nil {
-		panic("shorttid: default generator not initialized")
+		panic("stid: default generator not initialized")
 	}
 	return defaultGenerator.Generate()
+}
+
+func (g *Generator) MustGenerate() string {
+	id, err := g.Generate()
+	if err != nil {
+		panic("stid: failed to generate TID: " + err.Error())
+	}
+	return id
 }
 
 // encodeBaseN encodes a non-negative integer using the generator's alphabet.
 func (g *Generator) encodeBaseN(number uint64) (string, error) {
 	if number == 0 {
-		return string(g.config.Alphabet[0]), nil
+		return string(g.config.alphabet[0]), nil
 	}
 
 	// Estimate buffer size: log_base(number). Rough estimate is fine.
@@ -187,7 +203,7 @@ func (g *Generator) encodeBaseN(number uint64) (string, error) {
 			return "", errors.New("buffer size estimation failed in encodeBaseN")
 		}
 		remainder := number % uint64(g.base)
-		buf[i] = g.config.Alphabet[remainder]
+		buf[i] = g.config.alphabet[remainder]
 		number /= uint64(g.base)
 		i--
 	}
@@ -213,7 +229,7 @@ func (g *Generator) randomChars(length int) (string, error) {
 
 		for _, randomByte := range randomBytes {
 			if randomByte <= maxValidByte {
-				bytes[i] = g.config.Alphabet[int(randomByte)%g.base]
+				bytes[i] = g.config.alphabet[int(randomByte)%g.base]
 				i++
 				if i == length {
 					break // Got all required characters

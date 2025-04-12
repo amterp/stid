@@ -1,4 +1,4 @@
-package shorttid
+package stid
 
 import (
 	"fmt"
@@ -13,17 +13,17 @@ func Test_DefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	expectedEpoch := time.Unix(0, 0).UTC()
 
-	if !cfg.Epoch.Equal(expectedEpoch) {
-		t.Errorf("DefaultConfig Epoch got %v, want %v", cfg.Epoch, expectedEpoch)
+	if !cfg.epoch.Equal(expectedEpoch) {
+		t.Errorf("DefaultConfig epoch got %v, want %v", cfg.epoch, expectedEpoch)
 	}
-	if cfg.TimeGranularity != Millisecond {
-		t.Errorf("DefaultConfig TimeGranularity got %d, want %d (Millisecond)", cfg.TimeGranularity, Millisecond)
+	if cfg.timeGranularity != Millisecond {
+		t.Errorf("DefaultConfig timeGranularity got %d, want %d (Millisecond)", cfg.timeGranularity, Millisecond)
 	}
-	if cfg.Alphabet != DefaultAlphabet {
-		t.Errorf("DefaultConfig Alphabet got %q, want %q", cfg.Alphabet, DefaultAlphabet)
+	if cfg.alphabet != DefaultAlphabet {
+		t.Errorf("DefaultConfig alphabet got %q, want %q", cfg.alphabet, DefaultAlphabet)
 	}
-	if cfg.RandomChars != 5 {
-		t.Errorf("DefaultConfig RandomChars got %d, want 5", cfg.RandomChars)
+	if cfg.randomChars != 5 {
+		t.Errorf("DefaultConfig randomChars got %d, want 5", cfg.randomChars)
 	}
 }
 
@@ -38,50 +38,40 @@ func Test_NewGenerator_Validation(t *testing.T) {
 		{
 			name: "Valid Custom",
 			config: Config{
-				Epoch:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-				TimeGranularity: Second,
-				Alphabet:        "abc",
-				RandomChars:     3,
+				epoch:           time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				timeGranularity: Second,
+				alphabet:        "abc",
+				randomChars:     3,
 			},
 			expectError: false,
 		},
 		{
-			name: "Invalid TimeGranularity Zero",
+			name: "Invalid alphabet Empty",
 			config: Config{
-				Epoch:           DefaultEpoch,
-				TimeGranularity: 0, // Invalid
-				Alphabet:        DefaultAlphabet,
-				RandomChars:     5,
+				epoch:           DefaultEpoch,
+				timeGranularity: Millisecond,
+				alphabet:        "", // Invalid
+				randomChars:     5,
 			},
 			expectError: true,
 		},
 		{
-			name: "Invalid Alphabet Empty",
+			name: "Invalid alphabet Single Char",
 			config: Config{
-				Epoch:           DefaultEpoch,
-				TimeGranularity: Millisecond,
-				Alphabet:        "", // Invalid
-				RandomChars:     5,
+				epoch:           DefaultEpoch,
+				timeGranularity: Millisecond,
+				alphabet:        "a", // Invalid
+				randomChars:     5,
 			},
 			expectError: true,
 		},
 		{
-			name: "Invalid Alphabet Single Char",
+			name: "Invalid randomChars Negative",
 			config: Config{
-				Epoch:           DefaultEpoch,
-				TimeGranularity: Millisecond,
-				Alphabet:        "a", // Invalid
-				RandomChars:     5,
-			},
-			expectError: true,
-		},
-		{
-			name: "Invalid RandomChars Negative",
-			config: Config{
-				Epoch:           DefaultEpoch,
-				TimeGranularity: Millisecond,
-				Alphabet:        DefaultAlphabet,
-				RandomChars:     -1, // Invalid
+				epoch:           DefaultEpoch,
+				timeGranularity: Millisecond,
+				alphabet:        DefaultAlphabet,
+				randomChars:     -1, // Invalid
 			},
 			expectError: true,
 		},
@@ -102,9 +92,9 @@ func Test_NewGenerator_Validation(t *testing.T) {
 					t.Errorf("Expected a generator instance, but got nil")
 				}
 				// Check if nil location epoch was defaulted to UTC
-				if tc.config.Epoch.Location() == nil && gen != nil {
-					if gen.config.Epoch.Location() != time.UTC {
-						t.Errorf("Epoch location was nil, expected generator to default to UTC, but got %v", gen.config.Epoch.Location())
+				if tc.config.epoch.Location() == nil && gen != nil {
+					if gen.config.epoch.Location() != time.UTC {
+						t.Errorf("epoch location was nil, expected generator to default to UTC, but got %v", gen.config.epoch.Location())
 					}
 				}
 			}
@@ -151,10 +141,10 @@ func Test_Generate(t *testing.T) {
 // Test basic generation, uniqueness, and character set
 func Test_Generator_Generate_Basic(t *testing.T) {
 	cfg := Config{
-		Epoch:           time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-		TimeGranularity: Decisecond,
-		Alphabet:        "abcdef0123456789", // Hex Lowercase
-		RandomChars:     6,
+		epoch:           time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+		timeGranularity: Decisecond,
+		alphabet:        "abcdef0123456789", // Hex Lowercase
+		randomChars:     6,
 	}
 	gen, err := NewGenerator(cfg)
 	if err != nil {
@@ -175,8 +165,8 @@ func Test_Generator_Generate_Basic(t *testing.T) {
 		}
 
 		// Check character set
-		if !containsOnly(id, cfg.Alphabet) {
-			t.Errorf("ID %q contains characters outside the specified alphabet %q", id, cfg.Alphabet)
+		if !containsOnly(id, cfg.alphabet) {
+			t.Errorf("ID %q contains characters outside the specified alphabet %q", id, cfg.alphabet)
 		}
 
 		// Check for uniqueness
@@ -205,10 +195,10 @@ func Test_Generator_Generate_Basic(t *testing.T) {
 // Test sortability of generated IDs
 func Test_Generator_Generate_Sortability(t *testing.T) {
 	cfg := Config{
-		Epoch:           time.Now().UTC().Add(-10 * time.Second), // Start epoch recently
-		TimeGranularity: Decisecond,                              // 100ms
-		Alphabet:        DefaultAlphabet,
-		RandomChars:     4,
+		epoch:           time.Now().UTC().Add(-10 * time.Second), // Start epoch recently
+		timeGranularity: Decisecond,                              // 100ms
+		alphabet:        DefaultAlphabet,
+		randomChars:     4,
 	}
 	gen, err := NewGenerator(cfg)
 	if err != nil {
@@ -216,7 +206,7 @@ func Test_Generator_Generate_Sortability(t *testing.T) {
 	}
 
 	const numIDs = 5
-	const delay = 150 * time.Millisecond // Delay > TimeGranularity
+	const delay = 150 * time.Millisecond // Delay > timeGranularity
 
 	originalOrder := make([]string, numIDs)
 	sortedOrder := make([]string, numIDs)
@@ -248,10 +238,10 @@ func Test_Generator_Generate_Sortability(t *testing.T) {
 func Test_Generator_Generate_BeforeEpoch(t *testing.T) {
 	futureEpoch := time.Now().UTC().Add(1 * time.Hour)
 	gen, err := NewGenerator(Config{
-		Epoch:           futureEpoch,
-		TimeGranularity: Second,
-		Alphabet:        "01",
-		RandomChars:     1,
+		epoch:           futureEpoch,
+		timeGranularity: Second,
+		alphabet:        "01",
+		randomChars:     1,
 	})
 	if err != nil {
 		t.Fatalf("NewGenerator failed: %v", err)
@@ -268,10 +258,10 @@ func Test_Generator_Generate_BeforeEpoch(t *testing.T) {
 // Test generation with zero random characters
 func Test_Generator_Generate_ZeroRandomChars(t *testing.T) {
 	gen, err := NewGenerator(Config{
-		Epoch:           DefaultEpoch,
-		TimeGranularity: Millisecond,
-		Alphabet:        "0123456789",
-		RandomChars:     0, // No random part
+		epoch:           DefaultEpoch,
+		timeGranularity: Millisecond,
+		alphabet:        "0123456789",
+		randomChars:     0, // No random part
 	})
 	if err != nil {
 		t.Fatalf("NewGenerator failed: %v", err)
@@ -304,6 +294,17 @@ func Test_Generator_Generate_ZeroRandomChars(t *testing.T) {
 	}
 }
 
+func Test_NoTimeComponent(t *testing.T) {
+	gen := MustNewGenerator(NewConfig().WithTimeGranularity(0).WithRandomChars(10))
+
+	id1 := gen.MustGenerate()
+	id2 := gen.MustGenerate()
+
+	if id1 == id2 {
+		t.Errorf("Expected different IDs, but got identical %q", id1)
+	}
+}
+
 // Test internal encodeBaseN function
 func Test_EncodeBaseN(t *testing.T) {
 	// Use a dummy generator for testing encodeBaseN directly
@@ -329,7 +330,7 @@ func Test_EncodeBaseN(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Temporarily modify generator's config for the test case
-			gen.config.Alphabet = tc.alphabet
+			gen.config.alphabet = tc.alphabet
 			gen.base = len(tc.alphabet)
 
 			result, err := gen.encodeBaseN(tc.number)
@@ -342,7 +343,7 @@ func Test_EncodeBaseN(t *testing.T) {
 		})
 	}
 	// Restore default alphabet for subsequent tests if gen were reused (it isn't here)
-	gen.config.Alphabet = DefaultAlphabet
+	gen.config.alphabet = DefaultAlphabet
 	gen.base = len(DefaultAlphabet)
 }
 
@@ -365,7 +366,7 @@ func Test_RandomChars(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set generator alphabet for test case
-			gen.config.Alphabet = tc.alphabet
+			gen.config.alphabet = tc.alphabet
 			gen.base = len(tc.alphabet)
 
 			s1, err1 := gen.randomChars(tc.length)
@@ -399,8 +400,8 @@ func Test_RandomChars(t *testing.T) {
 func Test_TimeGranularityEffect(t *testing.T) {
 	epoch := time.Now().UTC().Add(-5 * time.Second) // Recent epoch
 
-	genSec, _ := NewGenerator(Config{Epoch: epoch, TimeGranularity: Second, Alphabet: "0123456789", RandomChars: 2})
-	genMs, _ := NewGenerator(Config{Epoch: epoch, TimeGranularity: Millisecond, Alphabet: "0123456789", RandomChars: 2})
+	genSec, _ := NewGenerator(Config{epoch: epoch, timeGranularity: Second, alphabet: "0123456789", randomChars: 2})
+	genMs, _ := NewGenerator(Config{epoch: epoch, timeGranularity: Millisecond, alphabet: "0123456789", randomChars: 2})
 
 	// Generate multiple quickly within the same second but different milliseconds
 	idSec1, _ := genSec.Generate()
@@ -412,10 +413,10 @@ func Test_TimeGranularityEffect(t *testing.T) {
 	idMs2, _ := genMs.Generate()
 
 	// Extract timestamp parts (assuming random part has fixed length here)
-	tsSec1 := idSec1[:len(idSec1)-genSec.config.RandomChars]
-	tsSec2 := idSec2[:len(idSec2)-genSec.config.RandomChars]
-	tsMs1 := idMs1[:len(idMs1)-genMs.config.RandomChars]
-	tsMs2 := idMs2[:len(idMs2)-genMs.config.RandomChars]
+	tsSec1 := idSec1[:len(idSec1)-genSec.config.randomChars]
+	tsSec2 := idSec2[:len(idSec2)-genSec.config.randomChars]
+	tsMs1 := idMs1[:len(idMs1)-genMs.config.randomChars]
+	tsMs2 := idMs2[:len(idMs2)-genMs.config.randomChars]
 
 	if tsSec1 != tsSec2 {
 		t.Errorf("Second granularity: Expected same timestamp part for IDs generated within the same second, got %q and %q", tsSec1, tsSec2)
@@ -427,7 +428,7 @@ func Test_TimeGranularityEffect(t *testing.T) {
 	// Generate after more than a second
 	time.Sleep(1100 * time.Millisecond)
 	idSec3, _ := genSec.Generate()
-	tsSec3 := idSec3[:len(idSec3)-genSec.config.RandomChars]
+	tsSec3 := idSec3[:len(idSec3)-genSec.config.randomChars]
 
 	if tsSec1 == tsSec3 {
 		t.Errorf("Second granularity: Expected different timestamp parts after >1sec delay, got identical %q", tsSec1)
@@ -436,11 +437,11 @@ func Test_TimeGranularityEffect(t *testing.T) {
 
 func Test_Sandbox(t *testing.T) {
 	gen, _ := NewGenerator(Config{
-		Epoch: DefaultEpoch,
-		//Epoch:          time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-		TimeGranularity: Millisecond,
-		Alphabet:        Base16LowerAlphabet,
-		RandomChars:     6,
+		epoch: DefaultEpoch,
+		//epoch:          time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		timeGranularity: Millisecond,
+		alphabet:        Base16LowerAlphabet,
+		randomChars:     6,
 	})
 
 	ids := make(map[string]struct{})
