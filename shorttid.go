@@ -3,6 +3,7 @@ package stid
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"math" // Import needed for the comment explanation
 	"strings"
@@ -22,26 +23,28 @@ const (
 	CrockfordBase32Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 )
 
-// TimeGranularity represents the time granularity in milliseconds.
-type TimeGranularity int
+// TickSize represents the size of ticks in milliseconds.
+type TickSize int
 
-// Common TimeGranularity values in milliseconds.
+// Common TickSize values in milliseconds.
 const (
-	Millisecond TimeGranularity = 1
-	Centisecond TimeGranularity = 10
-	Decisecond  TimeGranularity = 100
-	Second      TimeGranularity = 1000
-	Minute      TimeGranularity = 60000
-	Hour        TimeGranularity = 3600000
-	Day         TimeGranularity = 86400000
+	Millisecond TickSize = 1
+	Centisecond TickSize = 10
+	Decisecond  TickSize = 100
+	Second      TickSize = 1000
+	Minute      TickSize = 60000
+	Hour        TickSize = 3600000
+	Day         TickSize = 86400000
 )
 
 // Config holds the configuration for generating short TIDs.
 type Config struct {
-	epoch           time.Time       // The starting point for the time component (UTC recommended).
-	timeGranularity TimeGranularity // The granularity of the time component.
-	alphabet        string          // The alphabet used for encoding timestamp and random parts.
-	randomChars     int             // The number of random characters to append.
+	epoch          time.Time        // The starting point for the time component (UTC recommended).
+	tickSize       TickSize         // The tick size of the time component.
+	alphabet       string           // The alphabet used for encoding timestamp and random parts.
+	numRandomChars int              // The number of random characters to append.
+	timeProvider   func() time.Time // Function to provide the current time (for testing).
+	randomSource   io.Reader        // Source of randomness (for testing).
 }
 
 // Generator is responsible for generating TIDs based on a fixed configuration.
@@ -57,28 +60,26 @@ var (
 
 func init() {
 	var err error
-	defaultGenerator, err = NewGenerator(DefaultConfig())
+	defaultGenerator, err = NewGenerator(NewConfig())
 	if err != nil {
 		panic("stid: failed to initialize default generator: " + err.Error())
 	}
 }
 
-// DefaultConfig returns a default configuration:
+// NewConfig returns a default configuration:
 // - epoch: Unix epoch (1970-01-01 00:00:00 UTC)
-// - TimeGranularity: Millisecond (1ms)
+// - TickSize: Millisecond
 // - alphabet: Base62
-// - randomChars: 5
-func DefaultConfig() Config {
-	return Config{
-		epoch:           DefaultEpoch,
-		timeGranularity: Millisecond,
-		alphabet:        DefaultAlphabet,
-		randomChars:     5,
-	}
-}
-
+// - numRandomChars: 5
 func NewConfig() Config {
-	return DefaultConfig()
+	return Config{
+		epoch:          DefaultEpoch,
+		tickSize:       Millisecond,
+		alphabet:       DefaultAlphabet,
+		numRandomChars: 5,
+		randomSource:   rand.Reader,
+		timeProvider:   time.Now,
+	}
 }
 
 // WithEpoch sets the epoch for the generator.
@@ -87,9 +88,9 @@ func (c Config) WithEpoch(epoch time.Time) Config {
 	return c
 }
 
-// WithTimeGranularity sets the time granularity for the generator.
-func (c Config) WithTimeGranularity(granularity TimeGranularity) Config {
-	c.timeGranularity = granularity
+// WithTickSize sets the tick size for the time component of the generator.
+func (c Config) WithTickSize(tickSize TickSize) Config {
+	c.tickSize = tickSize
 	return c
 }
 
@@ -99,9 +100,21 @@ func (c Config) WithAlphabet(alphabet string) Config {
 	return c
 }
 
-// WithRandomChars sets the number of random characters for the generator.
-func (c Config) WithRandomChars(randomChars int) Config {
-	c.randomChars = randomChars
+// WithNumRandomChars sets the number of random characters for the generator.
+func (c Config) WithNumRandomChars(numRandomChars int) Config {
+	c.numRandomChars = numRandomChars
+	return c
+}
+
+// WithRandomSource sets the random source for the generator.
+func (c Config) WithRandomSource(randomSource io.Reader) Config {
+	c.randomSource = randomSource
+	return c
+}
+
+// WithTimeProvider sets the time provider for the generator.
+func (c Config) WithTimeProvider(timeProvider func() time.Time) Config {
+	c.timeProvider = timeProvider
 	return c
 }
 
@@ -112,8 +125,13 @@ func NewGenerator(config Config) (*Generator, error) {
 		return nil, errors.New("alphabet must contain at least 2 characters")
 	}
 
-	if config.randomChars < 0 {
+	if config.numRandomChars < 0 {
 		return nil, errors.New("number of random characters cannot be negative")
+	}
+
+	err := validateAlphabet(config.alphabet)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Generator{
@@ -133,7 +151,7 @@ func MustNewGenerator(config Config) *Generator {
 // Generate creates a new short TID using the generator's configuration.
 func (g *Generator) Generate() (string, error) {
 	// 1. Calculate timestamp ticks since configured epoch
-	now := time.Now().UTC() // Use UTC for consistent comparison with epoch
+	now := g.config.timeProvider().UTC()
 
 	// Check if current time is before the configured epoch. This must be done
 	// here, as 'now' is only known at generation time. Allow generation at epoch time.
@@ -143,9 +161,9 @@ func (g *Generator) Generate() (string, error) {
 
 	// 2. Encode timestamp ticks (if applicable)
 	encodedTimestamp := ""
-	if g.config.timeGranularity > 0 {
+	if g.config.tickSize > 0 {
 		delta := now.Sub(g.config.epoch)
-		ticks := uint64(delta.Milliseconds() / int64(g.config.timeGranularity))
+		ticks := uint64(delta.Milliseconds() / int64(g.config.tickSize))
 		encoded, err := g.encodeBaseN(ticks)
 		if err != nil {
 			return "", err
@@ -155,8 +173,8 @@ func (g *Generator) Generate() (string, error) {
 
 	// 3. Generate random part
 	randomPart := ""
-	if g.config.randomChars > 0 {
-		chars, err := g.randomChars(g.config.randomChars)
+	if g.config.numRandomChars > 0 {
+		chars, err := g.generateRandomChars(g.config.numRandomChars)
 		if err != nil {
 			return "", err
 		}
@@ -219,9 +237,9 @@ func (g *Generator) encodeBaseN(number uint64) (string, error) {
 	return string(buf[i+1:]), nil
 }
 
-// randomChars generates a cryptographically secure random string of the specified length
+// generateRandomChars generates a cryptographically secure random string of the specified length
 // using the generator's alphabet, avoiding modulo bias via rejection sampling.
-func (g *Generator) randomChars(length int) (string, error) {
+func (g *Generator) generateRandomChars(length int) (string, error) {
 	if length == 0 {
 		return "", nil
 	}
@@ -231,7 +249,7 @@ func (g *Generator) randomChars(length int) (string, error) {
 	maxValidByte := byte((256/g.base)*g.base - 1)
 
 	for i := 0; i < length; {
-		if _, err := io.ReadFull(rand.Reader, randomBytes); err != nil {
+		if _, err := io.ReadFull(g.config.randomSource, randomBytes); err != nil {
 			return "", errors.New("failed to read random bytes: " + err.Error())
 		}
 
@@ -248,4 +266,16 @@ func (g *Generator) randomChars(length int) (string, error) {
 	}
 
 	return string(bytes), nil
+}
+
+// ensure alphabet doesn't contain duplicates
+func validateAlphabet(alphabet string) error {
+	seen := make(map[rune]struct{})
+	for _, ch := range alphabet {
+		if _, exists := seen[ch]; exists {
+			return fmt.Errorf("alphabet contains duplicate character: %c", ch)
+		}
+		seen[ch] = struct{}{}
+	}
+	return nil
 }
