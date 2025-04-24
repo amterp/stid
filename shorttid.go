@@ -23,26 +23,23 @@ const (
 	CrockfordBase32Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 )
 
-// TickSize represents the size of ticks as a duration.
-type TickSize time.Duration
-
-// Common TickSize values in nanoseconds.
+// Common tick size durations.
 const (
-	Nanosecond  TickSize = 1
-	Microsecond TickSize = 1000
-	Millisecond TickSize = 1000000
-	Centisecond TickSize = 10000000
-	Decisecond  TickSize = 100000000
-	Second      TickSize = 1000000000
-	Minute      TickSize = 60000000000
-	Hour        TickSize = 3600000000000
-	Day         TickSize = 86400000000000
+	Nanosecond  = time.Nanosecond
+	Microsecond = 1000 * Nanosecond
+	Millisecond = 1000 * Microsecond
+	Centisecond = 10 * Millisecond
+	Decisecond  = 100 * Millisecond
+	Second      = 1000 * Millisecond
+	Minute      = 60 * Second
+	Hour        = 60 * Minute
+	Day         = 24 * Hour
 )
 
 // Config holds the configuration for generating short TIDs.
 type Config struct {
 	epoch          time.Time        // The starting point for the time component (UTC recommended).
-	tickSize       TickSize         // The tick size of the time component.
+	tickSize       time.Duration    // The tick size of the time component.
 	alphabet       string           // The alphabet used for encoding timestamp and random parts.
 	numRandomChars int              // The number of random characters to append.
 	timeProvider   func() time.Time // Function to provide the current time (for testing).
@@ -91,7 +88,7 @@ func (c Config) WithEpoch(epoch time.Time) Config {
 }
 
 // WithTickSize sets the tick size for the time component of the generator.
-func (c Config) WithTickSize(tickSize TickSize) Config {
+func (c Config) WithTickSize(tickSize time.Duration) Config {
 	c.tickSize = tickSize
 	return c
 }
