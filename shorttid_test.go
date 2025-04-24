@@ -440,7 +440,7 @@ func Test_DisallowsDuplicateRunesInAlphabet(t *testing.T) {
 	}
 }
 
-func TestGenerateIDs(t *testing.T) {
+func Test_GenerateIds(t *testing.T) {
 	epoch := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	times := []time.Time{
 		epoch,
@@ -494,6 +494,30 @@ func TestGenerateIDs(t *testing.T) {
 		if id != exp {
 			t.Errorf("index %d: expected id %q, got %q", i, exp, id)
 		}
+	}
+}
+
+func Test_TimeComponentGetsLongerWithSmallerTickSizes(t *testing.T) {
+	nano := MustNewGenerator(NewConfig().WithNumRandomChars(0).WithTickSize(Nanosecond)).MustGenerate()
+	milli := MustNewGenerator(NewConfig().WithNumRandomChars(0).WithTickSize(Millisecond)).MustGenerate()
+	second := MustNewGenerator(NewConfig().WithNumRandomChars(0).WithTickSize(Second)).MustGenerate()
+	hour := MustNewGenerator(NewConfig().WithNumRandomChars(0).WithTickSize(Hour)).MustGenerate()
+	day := MustNewGenerator(NewConfig().WithNumRandomChars(0).WithTickSize(Day)).MustGenerate()
+
+	if len(nano) <= len(milli) {
+		t.Errorf("Expected nano ID to be longer than milli ID, got %s vs %s", nano, milli)
+	}
+
+	if len(milli) <= len(second) {
+		t.Errorf("Expected milli ID to be longer than second ID, got %s vs %s", milli, second)
+	}
+
+	if len(second) <= len(hour) {
+		t.Errorf("Expected second ID to be longer than hour ID, got %s vs %s", second, hour)
+	}
+
+	if len(hour) <= len(day) {
+		t.Errorf("Expected hour ID to be longer than day ID, got %s vs %s", hour, day)
 	}
 }
 

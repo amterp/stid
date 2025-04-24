@@ -23,18 +23,20 @@ const (
 	CrockfordBase32Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 )
 
-// TickSize represents the size of ticks in milliseconds.
-type TickSize int
+// TickSize represents the size of ticks as a duration.
+type TickSize time.Duration
 
-// Common TickSize values in milliseconds.
+// Common TickSize values in nanoseconds.
 const (
-	Millisecond TickSize = 1
-	Centisecond TickSize = 10
-	Decisecond  TickSize = 100
-	Second      TickSize = 1000
-	Minute      TickSize = 60000
-	Hour        TickSize = 3600000
-	Day         TickSize = 86400000
+	Nanosecond  TickSize = 1
+	Microsecond TickSize = 1000
+	Millisecond TickSize = 1000000
+	Centisecond TickSize = 10000000
+	Decisecond  TickSize = 100000000
+	Second      TickSize = 1000000000
+	Minute      TickSize = 60000000000
+	Hour        TickSize = 3600000000000
+	Day         TickSize = 86400000000000
 )
 
 // Config holds the configuration for generating short TIDs.
@@ -163,7 +165,7 @@ func (g *Generator) Generate() (string, error) {
 	encodedTimestamp := ""
 	if g.config.tickSize > 0 {
 		delta := now.Sub(g.config.epoch)
-		ticks := uint64(delta.Milliseconds() / int64(g.config.tickSize))
+		ticks := uint64(delta.Nanoseconds() / int64(g.config.tickSize))
 		encoded, err := g.encodeBaseN(ticks)
 		if err != nil {
 			return "", err
