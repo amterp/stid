@@ -1,4 +1,4 @@
-package stid
+package flexid
 
 import (
 	"crypto/rand"
@@ -61,7 +61,7 @@ func init() {
 	var err error
 	defaultGenerator, err = NewGenerator(NewConfig())
 	if err != nil {
-		panic("stid: failed to initialize default generator: " + err.Error())
+		panic("flexid: failed to initialize default generator: " + err.Error())
 	}
 }
 
@@ -142,7 +142,7 @@ func NewGenerator(config Config) (*Generator, error) {
 func MustNewGenerator(config Config) *Generator {
 	generator, err := NewGenerator(config)
 	if err != nil {
-		panic("stid: failed to create generator: " + err.Error())
+		panic("flexid: failed to create generator: " + err.Error())
 	}
 	return generator
 }
@@ -191,7 +191,7 @@ func (g *Generator) Generate() (string, error) {
 // It panics if the internal default generator failed to initialize.
 func Generate() (string, error) {
 	if defaultGenerator == nil {
-		panic("stid: default generator not initialized")
+		panic("flexid: default generator not initialized")
 	}
 	return defaultGenerator.Generate()
 }
@@ -199,7 +199,7 @@ func Generate() (string, error) {
 func MustGenerate() string {
 	id, err := Generate()
 	if err != nil {
-		panic("stid: failed to generate TID: " + err.Error())
+		panic("flexid: failed to generate TID: " + err.Error())
 	}
 	return id
 }
@@ -207,7 +207,7 @@ func MustGenerate() string {
 func (g *Generator) MustGenerate() string {
 	id, err := g.Generate()
 	if err != nil {
-		panic("stid: failed to generate TID: " + err.Error())
+		panic("flexid: failed to generate TID: " + err.Error())
 	}
 	return id
 }

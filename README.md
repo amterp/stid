@@ -1,6 +1,7 @@
-# Go STID: Short Time IDs
+# Go FlexID: Flexible IDs
 
-A Go library for generating short string IDs with a time and random component. Also referred to as "STIDs": **S**hort **T**ime **ID**s.
+A Go library for generating short, configurable string IDs with a time and random component.
+Also referred to as "FIDs": **F**lexible **ID**s.
 
 Useful for when you want to *guarantee* 0 collisions between two points in time, while minimizing collisions for
 generated IDs *within* that time.
@@ -13,19 +14,19 @@ May generate `J3GzHY02O6S`.
 
 ## Features ✨
 
-- **Short:** Generates compact IDs using configurable character sets (alphabets).
-- **Collision Resistant:** Cryptographically secure random suffix minimizes collision probability.
 - **Highly Configurable:**
   - Set your own **epoch** (start date/time).
   - Adjust the **tick size** (milliseconds, seconds, minutes, etc.).
   - Choose different **alphabets** (Base62, Base16 (hex), Base64URL, Crockford Base32, or custom).
   - Control the **length** of the random part. Reduce for shorter IDs, increase for greater collision resistance.
+- **Short:** Generates compact IDs using configurable character sets (alphabets).
+- **Collision Resistant:** Cryptographically secure random suffix minimizes collision probability.
 - **Easy to Use:** Get started with sensible defaults or create fine-tuned generators.
 
 ## Installation 🚀
 
 ```sh
-go get github.com/amterp/stid
+go get github.com/amterp/flexid
 ```
 
 ## Usage 🔨
@@ -35,10 +36,10 @@ go get github.com/amterp/stid
 You can use the default generator, which uses some sensible default settings.
 
 ```go
-import "github.com/amterp/stid"
+import fid "github.com/amterp/flexid"
 
-id := stid.MustGenerate()
-anotherId, err := stid.Generate()
+id := fid.MustGenerate()
+anotherId, err := fid.Generate()
 ```
 
 ### Advanced (Custom Settings)
@@ -46,17 +47,17 @@ anotherId, err := stid.Generate()
 You can create your own `Generator` by passing it your own `Config` object.
 
 ```go
-import "github.com/amterp/stid"
+import fid "github.com/amterp/flexid"
 
 // NewConfig creates with defaults.
 // You can then chain With methods to customize settings.
-config := stid.NewConfig().
-	WithTickSize(stid.Second).
+config := fid.NewConfig().
+	WithTickSize(fid.Second).
 	WithNumRandomChars(6).
-	WithAlphabet(stid.Base16LowerAlphabet)
+	WithAlphabet(fid.Base16LowerAlphabet)
 
 // Create the generator with the config.
-generator, err := stid.NewGenerator(config)
+generator, err := fid.NewGenerator(config)
 if err != nil {
     panic(err)
 }
@@ -130,19 +131,19 @@ Below are some examples of IDs generated with different settings.
 | Base-64, UNIX epoch, hour, 5 random chars                  | `B2TXxM3k1`         |
 | Base-16, UNIX epoch, millisecond, 6 random chars           | `19628e9e59adc559d` |
 
-## Why STID?
+## Why FlexIDs?
 
-There are alternatives like UUIDs, NanoIDs, ULIDs, etc, so what does STID offer over these?
+There are alternatives like UUIDs, NanoIDs, ULIDs, etc, so what do FIDs offer over these?
 
 - **Configurability:** Fine-tune the epoch, tick size, alphabet, and random suffix length to precisely balance ID length, sortability, and collision resistance for your specific needs.
   - Need short IDs for a system with a known limited lifespan? Adjust the epoch and tick size.
   - Need higher collision resistance within a tick? Increase the random length.
-- **Brevity:** By configuring the epoch and tick size appropriately, STID can often generate significantly shorter IDs than alternatives like ULID or UUID, while retaining chronological sortability.
+- **Brevity:** By configuring the epoch and tick size appropriately, FlexID can generate significantly shorter IDs than alternatives like ULID or UUID, while retaining chronological sortability.
 - **Simplicity:** The underlying concept (time prefix + random suffix) is straightforward and easy to reason about.
 
 ## Performance
 
-Generating STIDs is very fast! There's no state or locking -- they'll generate as fast as your CPU can go!
+Generating FIDs is very fast! There's no state or locking - they'll generate as fast as your CPU can go!
 
 Benchmarking on an Apple M2 Pro, I get ~235 nanoseconds / op, or around 4-5 million IDs per second.
 
