@@ -1,5 +1,10 @@
 # Go FlexID: Flexible ID Generation
 
+[![Project status](https://img.shields.io/github/tag/amterp/flexid.svg?style=flat-square)](https://github.com/amterp/flexid/tags/latest)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/amterp/flexid)
+[![Go Report Card](https://goreportcard.com/badge/amterp/flexid?cache=0)](https://goreportcard.com/report/amterp/flexid)
+[![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 A Go library for generating short, configurable string IDs with a time and random component.
 Also referred to as "FIDs": **F**lexible **ID**s.
 
