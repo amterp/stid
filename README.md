@@ -22,6 +22,7 @@ May generate `J3GzHY02O6S`.
 - **Short:** Generates compact IDs using configurable character sets (alphabets).
 - **Collision Resistant:** Cryptographically secure random suffix minimizes collision probability.
 - **Easy to Use:** Get started with sensible defaults or create fine-tuned generators.
+- **Lightweight**: Zero dependencies.
 
 ## Installation 🚀
 
@@ -145,7 +146,7 @@ There are alternatives like UUIDs, NanoIDs, ULIDs, etc, so what do FIDs offer ov
 
 Generating FIDs is very fast! There's no state or locking - they'll generate as fast as your CPU can go!
 
-Benchmarking on an Apple M2 Pro, I get ~235 nanoseconds / op, or around 4-5 million IDs per second.
+[Benchmarking](./benchmarks) on an Apple M2 Pro, I get ~240 nanoseconds / op, or around 4-5 million IDs per second.
 
 ## Contributing 🙏
 
