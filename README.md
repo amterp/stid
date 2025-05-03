@@ -157,7 +157,4 @@ This library is licensed under the [MIT license](./LICENSE).
 
 ---
 
-Note on Versioning: This library was previously known as `stid`.
-The last version released under that name and module path (`github.com/amterp/stid`) was v1.2.0.
-The flexid library, using the module path `github.com/amterp/flexid`, begins its versioning at v1.3.0,
-continuing semantically from the previous version.
+Note: This library was previously known as `stid`. If you used it, see [MIGRATING.md](./docs/MIGRATING.md) on how to migrate to `flexid`.
