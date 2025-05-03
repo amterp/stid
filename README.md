@@ -38,7 +38,7 @@ You can use the default generator, which uses some sensible default settings.
 import "github.com/amterp/stid"
 
 id := stid.MustGenerate()
-anotherId, err := stdin.Generate()
+anotherId, err := stid.Generate()
 ```
 
 ### Advanced (Custom Settings)
