@@ -1,11 +1,11 @@
 package benchmarks
 
 import (
+	fid "github.com/amterp/flexid"
 	"github.com/google/uuid"
 	gonanoid "github.com/matoous/go-nanoid"
 	"testing"
 )
-import fid "github.com/amterp/flexid"
 
 func BenchmarkFlexId(b *testing.B) {
 	for i := 0; i < b.N; i++ {
