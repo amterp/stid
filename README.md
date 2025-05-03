@@ -1,4 +1,4 @@
-# Go FlexID: Flexible IDs
+# Go FlexID: Flexible ID Generation
 
 A Go library for generating short, configurable string IDs with a time and random component.
 Also referred to as "FIDs": **F**lexible **ID**s.
