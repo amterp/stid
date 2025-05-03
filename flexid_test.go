@@ -1,4 +1,4 @@
-package stid
+package flexid
 
 import (
 	"fmt"

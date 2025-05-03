@@ -1,3 +1,3 @@
-module github.com/amterp/stid
+module github.com/amterp/flexid
 
 go 1.24.2
